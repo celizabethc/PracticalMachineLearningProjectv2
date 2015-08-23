@@ -15,9 +15,9 @@ library(caret); library(rpart); library(rattle);library(randomForest);library(rp
 ##Reading in downloaded data
 testing <-read.csv("/Users/cynthiacozzetto/pml-testing.csv")
 training <-read.csv("/Users/cynthiacozzetto/pml-training.csv")
-
-
 summary(training$classe)
+
+##Partitioning training & testing data from training set
 inTrain <- createDataPartition(y=training$classe, p=0.6, list=FALSE)
 training.1 <- training[inTrain, ]
 testing.1 <- training[-inTrain, ]
@@ -27,49 +27,49 @@ set.seed(675)
 length(colnames(training.1))
 training.2 <- training.1[,colSums(is.na(training.1))<nrow(training.1)]
 testing.2 <- training.1[,colSums(is.na(testing.1))<nrow(testing.1)]
-
-
 length(colnames(training.2))
 
 ##Remove non-predictive colnames
 training.3<-subset(training.2,select=7:length(colnames(training.2)))
 testing.3<-subset(testing.2,select=7:length(colnames(testing.2)))
 
-
+##Removing columns with NA values
 na.table = sapply(training.3, function(x) {sum(is.na(x))})
 table(na.table)
 remove = names(na.table[na.table>13447])
 training.4 = training.3[, !names(training.3) %in% remove]
 testing.4 = training.3[, !names(testing.3) %in% remove]
-
-
-
 ```
+
+There are 5 factor classes to be predicted.  The data set includes over 160 variables with some of the variables describing the data set (and not to be used as predictor variables).
 
 Utilizing RPart & Random Forest to Build Model
 ----------------------------------------------
 ```{r}
-
-mod.rpart <- rpart(classe ~pitch_arm + yaw_arm + roll_arm + roll_belt + pitch_belt + yaw_belt + gyros_belt_x + gyros_belt_y + gyros_belt_z + accel_belt_x + accel_belt_y + accel_belt_z + magnet_belt_x + magnet_belt_y + magnet_belt_z + gyros_arm_x + gyros_arm_y + gyros_arm_z + accel_arm_x + accel_arm_y + accel_arm_z + magnet_arm_x + magnet_arm_y + magnet_arm_z + roll_dumbbell + pitch_dumbbell + yaw_dumbbell, data=training.4,method="class")
+##Building RPart model with selected variables from training.4
+mod.rpart <- rpart(classe~pitch_arm + yaw_arm + roll_arm + roll_belt + pitch_belt + yaw_belt + gyros_belt_x + gyros_belt_y + gyros_belt_z + accel_belt_x + accel_belt_y + accel_belt_z + magnet_belt_x + magnet_belt_y + magnet_belt_z + gyros_arm_x + gyros_arm_y + gyros_arm_z + accel_arm_x + accel_arm_y + accel_arm_z + magnet_arm_x + magnet_arm_y + magnet_arm_z + roll_dumbbell + pitch_dumbbell + yaw_dumbbell, data=training.4,method="class")
+##Visualizing Segmentation
 fancyRpartPlot(mod.rpart)
 
+pred.part <- predict(mod.rpart, testing.4, type = "class")
+confusionMatrix(pred.part, training.4$classe)
+
+
+##Random Forest Model
 mod.rf <-randomForest(classe ~pitch_arm + yaw_arm + roll_arm + roll_belt + pitch_belt + yaw_belt + gyros_belt_x + gyros_belt_y + gyros_belt_z + accel_belt_x + accel_belt_y + accel_belt_z + magnet_belt_x + magnet_belt_y + magnet_belt_z + gyros_arm_x + gyros_arm_y + gyros_arm_z + accel_arm_x + accel_arm_y + accel_arm_z + magnet_arm_x + magnet_arm_y + magnet_arm_z + roll_dumbbell + pitch_dumbbell + yaw_dumbbell , data=training.4)
-pred.rf <- predict(mod.rf, training.4, type = "class")
+pred.rf <- predict(mod.rf, testing.4, type = "class")
 
 ##Confusion Matrix
-confusionMatrix(pred.rf, training.4$classe)
+confusionMatrix(pred.rf, testing.4$classe)
 
 predictions <- predict(mod.rf, testing.4, type = "class")
 predictions <- predict(mod.rf, testing, type = "class")
-
-
-
-
 ```
-The confusion matrix reveals a very high accuracy for predicitions.
 
+The confusion matrix for Decision Tree revels a low accuracy for predictions.
 
-
+The confusion matrix for Random Forest reveals a very high accuracy for predicitions.
+The 95% CI of accuracy between [.9997,1] results in an out of sample error of 0%.  This may indicate overfitting to the sample.
 
 Submitting Assignment
 -----------------------
@@ -83,5 +83,6 @@ pml_write_files = function(x){
 }
 pml_write_files(predictions)
 
+##Code borrowed from instructions on project submission page.
 ```
 
