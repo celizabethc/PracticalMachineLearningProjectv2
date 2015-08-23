@@ -1,0 +1,87 @@
+Machine Learning Final Project
+========================================================
+by CCozzetto 
+
+"Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways."
+
+
+Loading Packages & Organizing Data
+------------------------------------
+```{r,message=FALSE, warning=FALSE}
+
+install.packages("rpart.plot")
+library(caret); library(rpart); library(rattle);library(randomForest);library(rpart.plot);library(RColorBrewer)
+
+##Reading in downloaded data
+testing <-read.csv("/Users/cynthiacozzetto/pml-testing.csv")
+training <-read.csv("/Users/cynthiacozzetto/pml-training.csv")
+
+
+summary(training$classe)
+inTrain <- createDataPartition(y=training$classe, p=0.6, list=FALSE)
+training.1 <- training[inTrain, ]
+testing.1 <- training[-inTrain, ]
+set.seed(675)
+
+##Clean Dataset for Descriptive Vars & N/As
+length(colnames(training.1))
+training.2 <- training.1[,colSums(is.na(training.1))<nrow(training.1)]
+testing.2 <- training.1[,colSums(is.na(testing.1))<nrow(testing.1)]
+
+
+length(colnames(training.2))
+
+##Remove non-predictive colnames
+training.3<-subset(training.2,select=7:length(colnames(training.2)))
+testing.3<-subset(testing.2,select=7:length(colnames(testing.2)))
+
+
+na.table = sapply(training.3, function(x) {sum(is.na(x))})
+table(na.table)
+remove = names(na.table[na.table>13447])
+training.4 = training.3[, !names(training.3) %in% remove]
+testing.4 = training.3[, !names(testing.3) %in% remove]
+
+
+
+```
+
+Utilizing RPart & Random Forest to Build Model
+----------------------------------------------
+```{r}
+
+mod.rpart <- rpart(classe ~pitch_arm + yaw_arm + roll_arm + roll_belt + pitch_belt + yaw_belt + gyros_belt_x + gyros_belt_y + gyros_belt_z + accel_belt_x + accel_belt_y + accel_belt_z + magnet_belt_x + magnet_belt_y + magnet_belt_z + gyros_arm_x + gyros_arm_y + gyros_arm_z + accel_arm_x + accel_arm_y + accel_arm_z + magnet_arm_x + magnet_arm_y + magnet_arm_z + roll_dumbbell + pitch_dumbbell + yaw_dumbbell, data=training.4,method="class")
+fancyRpartPlot(mod.rpart)
+
+mod.rf <-randomForest(classe ~pitch_arm + yaw_arm + roll_arm + roll_belt + pitch_belt + yaw_belt + gyros_belt_x + gyros_belt_y + gyros_belt_z + accel_belt_x + accel_belt_y + accel_belt_z + magnet_belt_x + magnet_belt_y + magnet_belt_z + gyros_arm_x + gyros_arm_y + gyros_arm_z + accel_arm_x + accel_arm_y + accel_arm_z + magnet_arm_x + magnet_arm_y + magnet_arm_z + roll_dumbbell + pitch_dumbbell + yaw_dumbbell , data=training.4)
+pred.rf <- predict(mod.rf, training.4, type = "class")
+
+##Confusion Matrix
+confusionMatrix(pred.rf, training.4$classe)
+
+predictions <- predict(mod.rf, testing.4, type = "class")
+predictions <- predict(mod.rf, testing, type = "class")
+
+
+
+
+```
+The confusion matrix reveals a very high accuracy for predicitions.
+
+
+
+
+Submitting Assignment
+-----------------------
+```{r}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(predictions)
+
+```
+
